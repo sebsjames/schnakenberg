@@ -41,7 +41,7 @@ To build and run the example:
 git clone git@github.com:sebsjames/schnakenberg
 
 # Clone, copy or symlink mathplot INSIDE your example:
-cd mathplot_template # or whatever you named your fork/copy
+cd schnakenberg
 git clone --recurse-submodules git@github.com:sebsjames/mathplot
 
 # Build schakenberg in a 'build' directory
