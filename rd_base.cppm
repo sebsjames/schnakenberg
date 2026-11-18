@@ -1,65 +1,30 @@
-#pragma once
+module;
 
+#include <cstdint>
 #include <memory>
 #include <sstream>
 #include <vector>
 #include <array>
 #include <iomanip>
 #include <cmath>
-#include <hdf5.h>
+#include <filesystem>
 
-#include <sm/mathconst>
-#include <sm/random>
-#define HEXGRID_COMPILE_LOAD_AND_SAVE 1
-#include <sm/hexgrid>
-#include <sm/hdfdata>
+export module rd_base;
 
-#include <mplot/tools.h>
-#include <mplot/ReadCurves.h>
+import sm.mathconst;
+import sm.random;
+import sm.hexgrid;
+import sm.hdfdata;
+import sm.hexgrid.hdf;
+import mplot.readcurves;
 
-/*
- * Macros for testing neighbours. The step along for neighbours on the
- * rows above/below is given by:
- *
- * Dest  | step
- * ----------------------
- * NNE   | +rowlen
- * NNW   | +rowlen - 1
- * NSW   | -rowlen
- * NSE   | -rowlen + 1
- */
-#define NE(hi) (this->hg->d_ne[hi])
-#define HAS_NE(hi) (this->hg->d_ne[hi] == -1 ? false : true)
-
-#define NW(hi) (this->hg->d_nw[hi])
-#define HAS_NW(hi) (this->hg->d_nw[hi] == -1 ? false : true)
-
-#define NNE(hi) (this->hg->d_nne[hi])
-#define HAS_NNE(hi) (this->hg->d_nne[hi] == -1 ? false : true)
-
-#define NNW(hi) (this->hg->d_nnw[hi])
-#define HAS_NNW(hi) (this->hg->d_nnw[hi] == -1 ? false : true)
-
-#define NSE(hi) (this->hg->d_nse[hi])
-#define HAS_NSE(hi) (this->hg->d_nse[hi] == -1 ? false : true)
-
-#define NSW(hi) (this->hg->d_nsw[hi])
-#define HAS_NSW(hi) (this->hg->d_nsw[hi] == -1 ? false : true)
-
-#define IF_HAS_NE(hi, yesval, noval)  (HAS_NE(hi)  ? yesval : noval)
-#define IF_HAS_NNE(hi, yesval, noval) (HAS_NNE(hi) ? yesval : noval)
-#define IF_HAS_NNW(hi, yesval, noval) (HAS_NNW(hi) ? yesval : noval)
-#define IF_HAS_NW(hi, yesval, noval)  (HAS_NW(hi)  ? yesval : noval)
-#define IF_HAS_NSW(hi, yesval, noval) (HAS_NSW(hi) ? yesval : noval)
-#define IF_HAS_NSE(hi, yesval, noval) (HAS_NSE(hi) ? yesval : noval)
-
-namespace sm
+export namespace sm
 {
     /*!
      * Base class for RD systems
      */
-    template <typename Flt>
-    class RD_Base
+    template <typename F>
+    class rd_base
     {
     public:
 
@@ -77,46 +42,46 @@ namespace sm
         /*!
          * Holds the number of hexes in the populated hexgrid
          */
-        alignas(Flt) unsigned int nhex = 0;
+        alignas(F) std::uint32_t nhex = 0;
 
         /*!
          * Over what length scale should some values fall off to zero
          * towards the boundary? Used in a couple of different locations.
          */
-        alignas(Flt) Flt boundaryFalloffDist = Flt{0.02}; // 0.02 default
+        alignas(F) F boundaryFalloffDist = F{0.02}; // 0.02 default
 
     protected:
         /*!
          * Our choice of dt.
          */
-        alignas(Flt) Flt dt = Flt{0.00001};
+        alignas(F) F dt = F{0.00001};
 
         /*!
          * Compute half and sixth dt in constructor.
          */
-        alignas(Flt) Flt halfdt = Flt{0};
-        alignas(Flt) Flt sixthdt = Flt{0};
+        alignas(F) F halfdt = F{0};
+        alignas(F) F sixthdt = F{0};
 
         /*!
          * Hex to hex distance. Populate this from hg.d after hg has been
          * initialised.
          */
-        alignas(Flt) Flt d = Flt{1};
-        alignas(Flt) Flt v = Flt{1};
+        alignas(F) F d = F{1};
+        alignas(F) F v = F{1};
 
         /*!
          * Parameters that depend on d and v:
          */
-        alignas(Flt) Flt oneoverd = Flt{1}/this->d;
-        alignas(Flt) Flt oneover2d = Flt{1}/(this->d+this->d);
-        alignas(Flt) Flt oneover3d = Flt{1}/(Flt{3}*this->d);
-        alignas(Flt) Flt oneover3dd = Flt{1} / Flt{3}*this->d*this->d;
-        alignas(Flt) Flt twoover3dd = Flt{2} / Flt{3}*this->d*this->d;
+        alignas(F) F oneoverd = F{1}/this->d;
+        alignas(F) F oneover2d = F{1}/(this->d+this->d);
+        alignas(F) F oneover3d = F{1}/(F{3}*this->d);
+        alignas(F) F oneover3dd = F{1} / F{3}*this->d*this->d;
+        alignas(F) F twoover3dd = F{2} / F{3}*this->d*this->d;
 
-        alignas(Flt) Flt oneoverv = Flt{1}/this->v;
-        alignas(Flt) Flt twov = this->v+this->v;
-        alignas(Flt) Flt oneover2v = Flt{1}/this->twov;
-        alignas(Flt) Flt oneover4v = Flt{1}/(this->twov+this->twov);
+        alignas(F) F oneoverv = F{1}/this->v;
+        alignas(F) F twov = this->v+this->v;
+        alignas(F) F oneover2v = F{1}/this->twov;
+        alignas(F) F oneover4v = F{1}/(this->twov+this->twov);
 
     public:
 
@@ -125,7 +90,7 @@ namespace sm
          * out. Only to show a message saying "100 steps done...", but
          * that's reason enough.
          */
-        alignas(Flt) unsigned int stepCount = 0;
+        alignas(F) std::uint32_t stepCount = 0;
 
         /*!
          * ALIGNAS REGION ENDS.
@@ -141,7 +106,7 @@ namespace sm
         /*!
          * The hexgrid "background" for the Reaction Diffusion system.
          */
-        std::unique_ptr<sm::hexgrid> hg;
+        std::unique_ptr<sm::hexgrid<F>> hg;
 
         /*!
          * The logpath for this model. Used when saving data out.
@@ -154,7 +119,7 @@ namespace sm
         void setLogpath (const std::string p) {
             this->logpath = p;
             // Ensure log directory exists
-            mplot::tools::createDir (this->logpath);
+            std::filesystem::create_directories (this->logpath);
         }
 
         /*!
@@ -172,78 +137,78 @@ namespace sm
         /*!
          * Simple constructor; no arguments.
          */
-        RD_Base()
+        rd_base()
         {
-            this->halfdt = this->dt/Flt{2};
-            this->sixthdt = this->dt/Flt{6};
+            this->halfdt = this->dt/F{2};
+            this->sixthdt = this->dt/F{6};
         }
 
         /*!
          * Destructor has nothing to do
          */
-        ~RD_Base() {}
+        ~rd_base() {}
 
         /*!
          * Utility functions to resize/zero vector-vectors that hold N
          * different RD variables.
          */
-        void resize_vector_vector (std::vector<std::vector<Flt> >& vv, unsigned int N)
+        void resize_vector_vector (std::vector<std::vector<F> >& vv, std::uint32_t N)
         {
             vv.resize (N);
-            for (unsigned int i=0; i<N; ++i) {
-                vv[i].resize (this->nhex, Flt{0});
+            for (std::uint32_t i=0; i<N; ++i) {
+                vv[i].resize (this->nhex, F{0});
             }
         }
-        void zero_vector_vector (std::vector<std::vector<Flt> >& vv, unsigned int N)
+        void zero_vector_vector (std::vector<std::vector<F> >& vv, std::uint32_t N)
         {
-            for (unsigned int i=0; i<N; ++i) {
-                vv[i].assign (this->nhex, Flt{0});
+            for (std::uint32_t i=0; i<N; ++i) {
+                vv[i].assign (this->nhex, F{0});
             }
         }
-        void set_vector_vector (std::vector<std::vector<Flt> >& vv, unsigned int N, Flt value)
+        void set_vector_vector (std::vector<std::vector<F> >& vv, std::uint32_t N, F value)
         {
-            for (unsigned int i=0; i<N; ++i) {
+            for (std::uint32_t i=0; i<N; ++i) {
                 vv[i].assign (this->nhex, value);
             }
         }
-        void resize_vector_vector (std::vector<std::vector<Flt> >& vv, unsigned int N, unsigned int M)
+        void resize_vector_vector (std::vector<std::vector<F> >& vv, std::uint32_t N, std::uint32_t M)
         {
             vv.resize (N);
-            for (unsigned int i=0; i<N; ++i) {
-                vv[i].resize (M, Flt{0});
+            for (std::uint32_t i=0; i<N; ++i) {
+                vv[i].resize (M, F{0});
             }
         }
-        void zero_vector_vector (std::vector<std::vector<Flt> >& vv, unsigned int N, unsigned int M)
+        void zero_vector_vector (std::vector<std::vector<F> >& vv, std::uint32_t N, std::uint32_t M)
         {
-            for (unsigned int i=0; i<N; ++i) {
-                vv[i].assign (M, Flt{0});
+            for (std::uint32_t i=0; i<N; ++i) {
+                vv[i].assign (M, F{0});
             }
         }
-        void set_vector_vector (std::vector<std::vector<Flt> >& vv, unsigned int N, unsigned int M, Flt value)
+        void set_vector_vector (std::vector<std::vector<F> >& vv, std::uint32_t N, std::uint32_t M, F value)
         {
-            for (unsigned int i=0; i<N; ++i) {
+            for (std::uint32_t i=0; i<N; ++i) {
                 vv[i].assign (M, value);
             }
         }
 
         /*!
-         * Resize/zero M vectors of N vectors of nhex Flts.
+         * Resize/zero M vectors of N vectors of nhex Fs.
          */
-        void resize_vector_vector_vector (std::vector<std::vector<std::vector<Flt> > >& vvv, unsigned int N, unsigned int M)
+        void resize_vector_vector_vector (std::vector<std::vector<std::vector<F> > >& vvv, std::uint32_t N, std::uint32_t M)
         {
             vvv.resize (M);
-            for (unsigned int m=0; m<M; ++m) {
+            for (std::uint32_t m=0; m<M; ++m) {
                 vvv[m].resize (N);
-                for (unsigned int i=0; i<N; ++i) {
-                    vvv[m][i].resize (this->nhex, Flt{0});
+                for (std::uint32_t i=0; i<N; ++i) {
+                    vvv[m][i].resize (this->nhex, F{0});
                 }
             }
         }
-        void zero_vector_vector_vector (std::vector<std::vector<std::vector<Flt> > >& vvv, unsigned int N, unsigned int M)
+        void zero_vector_vector_vector (std::vector<std::vector<std::vector<F> > >& vvv, std::uint32_t N, std::uint32_t M)
         {
-            for (unsigned int m=0; m<M; ++m) {
-                for (unsigned int i=0; i<N; ++i) {
-                    vvv[m][i].assign (M, Flt{0});
+            for (std::uint32_t m=0; m<M; ++m) {
+                for (std::uint32_t i=0; i<N; ++i) {
+                    vvv[m][i].assign (M, F{0});
                 }
             }
         }
@@ -251,85 +216,85 @@ namespace sm
         /*!
          * Resize/zero a variable that'll be nhex elements long
          */
-        void resize_vector_variable (std::vector<Flt>& v) { v.resize (this->nhex, Flt{0}); }
-        void zero_vector_variable (std::vector<Flt>& v) { v.assign (this->nhex, Flt{0}); }
+        void resize_vector_variable (std::vector<F>& v) { v.resize (this->nhex, F{0}); }
+        void zero_vector_variable (std::vector<F>& v) { v.assign (this->nhex, F{0}); }
 
         /*!
          * Resize/zero a parameter that'll be N elements long
          */
-        void resize_vector_param (std::vector<Flt>& p, unsigned int N) { p.resize (N, Flt{0}); }
-        void zero_vector_param (std::vector<Flt>& p, unsigned int N) { p.assign (N, Flt{0}); }
+        void resize_vector_param (std::vector<F>& p, std::uint32_t N) { p.resize (N, F{0}); }
+        void zero_vector_param (std::vector<F>& p, std::uint32_t N) { p.assign (N, F{0}); }
 
         /*!
          * Resize/zero a vector of M vectors of parameters that'll each be N
          * elements long
          */
-        void resize_vector_vector_param (std::vector<std::vector<Flt> >& vp, unsigned int N, unsigned int M)
+        void resize_vector_vector_param (std::vector<std::vector<F> >& vp, std::uint32_t N, std::uint32_t M)
         {
             vp.resize (M);
-            for (unsigned int m = 0; m<M; ++m) {
-                vp[m].resize (N, Flt{0});
+            for (std::uint32_t m = 0; m<M; ++m) {
+                vp[m].resize (N, F{0});
             }
         }
-        void zero_vector_vector_param (std::vector<std::vector<Flt> >& vp, unsigned int N, unsigned int M)
+        void zero_vector_vector_param (std::vector<std::vector<F> >& vp, std::uint32_t N, std::uint32_t M)
         {
-            for (unsigned int m = 0; m<M; ++m) {
-                vp[m].assign (N, Flt{0});
+            for (std::uint32_t m = 0; m<M; ++m) {
+                vp[m].assign (N, F{0});
             }
         }
 
         /*!
          * Resize/zero a gradient field
          */
-        void resize_gradient_field (std::array<std::vector<Flt>, 2>& g)
+        void resize_gradient_field (std::array<std::vector<F>, 2>& g)
         {
-            g[0].resize (this->nhex, Flt{0});
-            g[1].resize (this->nhex, Flt{0});
+            g[0].resize (this->nhex, F{0});
+            g[1].resize (this->nhex, F{0});
         }
-        void zero_gradient_field (std::array<std::vector<Flt>, 2>& g)
+        void zero_gradient_field (std::array<std::vector<F>, 2>& g)
         {
-            g[0].assign (this->nhex, Flt{0});
-            g[1].assign (this->nhex, Flt{0});
+            g[0].assign (this->nhex, F{0});
+            g[1].assign (this->nhex, F{0});
         }
 
         /*!
-         * Resize/zero a vector size N containing arrays of two vector<Flt>s
+         * Resize/zero a vector size N containing arrays of two vector<F>s
          * which are the x and y components of a (mathematical) vector
          * field.
          */
-        void resize_vector_array_vector (std::vector<std::array<std::vector<Flt>, 2> >& vav, unsigned int N)
+        void resize_vector_array_vector (std::vector<std::array<std::vector<F>, 2> >& vav, std::uint32_t N)
         {
             vav.resize (N);
-            for (unsigned int n = 0; n<N; ++n) {
+            for (std::uint32_t n = 0; n<N; ++n) {
                 this->resize_gradient_field (vav[n]);
             }
         }
-        void zero_vector_array_vector (std::vector<std::array<std::vector<Flt>, 2> >& vav, unsigned int N)
+        void zero_vector_array_vector (std::vector<std::array<std::vector<F>, 2> >& vav, std::uint32_t N)
         {
-            for (unsigned int i = 0; i<N; ++i) {
+            for (std::uint32_t i = 0; i<N; ++i) {
                 this->zero_gradient_field (vav[i]);
             }
         }
 
         /*!
          * Resize/zero a vector M containing vectors of size N containing arrays of
-         * two vector<Flt>s which are the x and y components of a (mathematical)
+         * two vector<F>s which are the x and y components of a (mathematical)
          * vector field.
          */
-        void resize_vector_vector_array_vector (std::vector<std::vector<std::array<std::vector<Flt>, 2> > >& vvav, unsigned int N, unsigned int M)
+        void resize_vector_vector_array_vector (std::vector<std::vector<std::array<std::vector<F>, 2> > >& vvav, std::uint32_t N, std::uint32_t M)
         {
             vvav.resize (M);
-            for (unsigned int j = 0; j<M; ++j) {
+            for (std::uint32_t j = 0; j<M; ++j) {
                 vvav[j].resize (N);
-                for (unsigned int n = 0; n<N; ++n) {
+                for (std::uint32_t n = 0; n<N; ++n) {
                     this->resize_gradient_field (vvav[j][n]);
                 }
             }
         }
-        void zero_vector_vector_array_vector (std::vector<std::vector<std::array<std::vector<Flt>, 2> > >& vvav, unsigned int N, unsigned int M)
+        void zero_vector_vector_array_vector (std::vector<std::vector<std::array<std::vector<F>, 2> > >& vvav, std::uint32_t N, std::uint32_t M)
         {
-            for (unsigned int j = 0; j<M; ++j) {
-                for (unsigned int i = 0; i<N; ++i) {
+            for (std::uint32_t j = 0; j<M; ++j) {
+                for (std::uint32_t i = 0; i<N; ++i) {
                     this->zero_gradient_field (vvav[j][i]);
                 }
             }
@@ -342,17 +307,17 @@ namespace sm
          * I apply a sigmoid to the boundary hexes, so that the noise
          * drops away towards the edge of the domain.
          */
-        void noiseify_vector_variable (std::vector<Flt>& v, Flt offset, Flt gain)
+        void noiseify_vector_variable (std::vector<F>& v, F offset, F gain)
         {
-            sm::rand_uniform<Flt> rng;
+            sm::rand_uniform<F> rng;
             for (auto h : this->hg->hexen) {
                 // boundarySigmoid. Jumps sharply (100, larger is
                 // sharper) over length scale 0.05 to 1. So if
                 // distance from boundary > 0.05, noise has normal
                 // value. Close to boundary, noise is less.
                 v[h.vi] = rng.get() * gain + offset;
-                if (h.distToBoundary > -0.5) { // It's possible that distToBoundary is set to -1.0
-                    Flt bSig = Flt{1} / ( Flt{1} + std::exp (-Flt{100}*(h.distToBoundary-this->boundaryFalloffDist)) );
+                if (h.dist_to_boundary > -0.5) { // It's possible that dist_to_boundary is set to -1.0
+                    F bSig = F{1} / ( F{1} + std::exp (-F{100}*(h.dist_to_boundary - this->boundaryFalloffDist)) );
                     v[h.vi] = v[h.vi] * bSig;
                 }
             }
@@ -365,24 +330,25 @@ namespace sm
         {
             // Create a hexgrid. 3 is the 'x span' which determines how
             // many hexes are initially created. 0 is the z co-ordinate for the hexgrid.
-            this->hg = std::make_unique<sm::hexgrid>(this->hextohex_d, this->hexspan, 0);
+            this->hg = std::make_unique<sm::hexgrid<F>>(this->hextohex_d, this->hexspan, 0);
 
             // Either set a boundary using the svgpath, or set it as an ellipse
             if (this->svgpath != "") {
                 // Read the curves which make a boundary
                 this->r.init (this->svgpath);
                 // Set the boundary in the hexgrid
-                this->hg->setBoundary (this->r.getCorticalPath());
+                auto rpath = this->r.getCorticalPath(); // always becurvepath<float, 3>
+                this->hg->set_boundary (rpath);         // needs bezcurvepath<F, 3>
             } else {
-                this->hg->setEllipticalBoundary (this->ellipse_a, this->ellipse_b);
+                this->hg->set_elliptical_boundary (this->ellipse_a, this->ellipse_b);
             }
             // Compute the distances from the boundary
-            this->hg->computeDistanceToBoundary();
+            this->hg->compute_distance_to_boundary();
             // Vector size comes from number of Hexes in the hexgrid
             this->nhex = this->hg->num();
             // Spatial d comes from the hexgrid, too.
-            this->set_d(this->hg->getd());
-            this->set_v(this->hg->getv());
+            this->set_d(this->hg->get_d());
+            this->set_v(this->hg->get_v());
         }
 
         /*!
@@ -396,7 +362,7 @@ namespace sm
          * Require private setters for d and v as there are several other
          * members that have to be updated at the same time.
          */
-        virtual void set_d (Flt d_)
+        virtual void set_d (F d_)
         {
             this->d = d_;
             this->oneoverd = 1.0/this->d;
@@ -406,7 +372,7 @@ namespace sm
             this->twoover3dd = 2.0 / (3*this->d*this->d);
         }
 
-        virtual void set_v (Flt v_)
+        virtual void set_v (F v_)
         {
             this->v = v_;
             this->oneoverv = 1.0/this->v;
@@ -419,18 +385,18 @@ namespace sm
         /*!
          * Public getters for d and v
          */
-        Flt get_d() const { return this->d; }
-        Flt get_v() const { return this->v; }
+        F get_d() const { return this->d; }
+        F get_v() const { return this->v; }
 
         /*!
          * Public accessors for dt
          */
-        void set_dt (Flt _dt) {
+        void set_dt (F _dt) {
             this->dt = _dt;
             this->halfdt = this->dt/2.0;
             this->sixthdt = this->dt/6.0;
         }
-        Flt get_dt() const { return this->dt; }
+        F get_dt() const { return this->dt; }
 
     public:
 
@@ -450,7 +416,7 @@ namespace sm
             std::stringstream fname;
             fname << this->logpath << "/positions.h5";
             sm::hdfdata data(fname.str(), std::ios::out | std::ios::trunc);
-            data.add_val ("/area", this->hg->num() * this->hg->getHexArea());
+            data.add_val ("/area", this->hg->num() * this->hg->get_hex_area());
             this->saveHexPositions (data);
         }
 
@@ -467,8 +433,8 @@ namespace sm
             // Add the neighbour information too.
             std::vector<float> x_ne = this->hg->d_x;
             std::vector<float> y_ne = this->hg->d_y;
-            unsigned int count = 0;
-            for (int i : this->hg->d_ne) {
+            std::uint32_t count = 0;
+            for (std::int32_t i : this->hg->d_n0) {
                 if (i >= 0) {
                     x_ne[count] = this->hg->d_x[i];
                     y_ne[count] = this->hg->d_y[i];
@@ -481,7 +447,7 @@ namespace sm
             std::vector<float> x_nne = this->hg->d_x;
             std::vector<float> y_nne = this->hg->d_y;
             count = 0;
-            for (int i : this->hg->d_nne) {
+            for (std::int32_t i : this->hg->d_n1) {
                 if (i >= 0) {
                     x_nne[count] = this->hg->d_x[i];
                     y_nne[count] = this->hg->d_y[i];
@@ -494,7 +460,7 @@ namespace sm
             std::vector<float> x_nnw = this->hg->d_x;
             std::vector<float> y_nnw = this->hg->d_y;
             count = 0;
-            for (int i : this->hg->d_nnw) {
+            for (std::int32_t i : this->hg->d_n2) {
                 if (i >= 0) {
                     x_nnw[count] = this->hg->d_x[i];
                     y_nnw[count] = this->hg->d_y[i];
@@ -507,7 +473,7 @@ namespace sm
             std::vector<float> x_nw = this->hg->d_x;
             std::vector<float> y_nw = this->hg->d_y;
             count = 0;
-            for (int i : this->hg->d_nw) {
+            for (std::int32_t i : this->hg->d_n3) {
                 if (i >= 0) {
                     x_nw[count] = this->hg->d_x[i];
                     y_nw[count] = this->hg->d_y[i];
@@ -520,7 +486,7 @@ namespace sm
             std::vector<float> x_nsw = this->hg->d_x;
             std::vector<float> y_nsw = this->hg->d_y;
             count = 0;
-            for (int i : this->hg->d_nsw) {
+            for (std::int32_t i : this->hg->d_n4) {
                 if (i >= 0) {
                     x_nsw[count] = this->hg->d_x[i];
                     y_nsw[count] = this->hg->d_y[i];
@@ -533,7 +499,7 @@ namespace sm
             std::vector<float> x_nse = this->hg->d_x;
             std::vector<float> y_nse = this->hg->d_y;
             count = 0;
-            for (int i : this->hg->d_nse) {
+            for (std::int32_t i : this->hg->d_n5) {
                 if (i >= 0) {
                     x_nse[count] = this->hg->d_x[i];
                     y_nse[count] = this->hg->d_y[i];
@@ -552,24 +518,24 @@ namespace sm
          */
 
         /*!
-         * Normalise the vector of Flts f.
+         * Normalise the vector of Fs f.
          */
-        void normalise (std::vector<Flt>& f)
+        void normalise (std::vector<F>& f)
         {
-            Flt maxf = -1e7;
-            Flt minf = +1e7;
+            F maxf = -1e7;
+            F minf = +1e7;
 
             // Determines min and max
             for (auto val : f) {
                 if (val>maxf) { maxf = val; }
                 if (val<minf) { minf = val; }
             }
-            Flt scalef = 1.0 /(maxf - minf);
+            F scalef = 1.0 /(maxf - minf);
 
-            std::vector<std::vector<Flt> > norm_a;
+            std::vector<std::vector<F> > norm_a;
             this->resize_vector_vector (norm_a);
-            for (unsigned int fi = 0; fi < f.size(); ++fi) {
-                f[fi] = fmin (fmax (((f[fi]) - minf) * scalef, Flt{0}), Flt{1});
+            for (std::uint32_t fi = 0; fi < f.size(); ++fi) {
+                f[fi] = fmin (fmax (((f[fi]) - minf) * scalef, F{0}), F{1});
             }
         }
 
@@ -584,41 +550,41 @@ namespace sm
          * For each Hex, work out the gradient in x and y directions
          * using whatever neighbours can contribute to an estimate.
          */
-        void spacegrad2D (std::vector<Flt>& f, std::array<std::vector<Flt>, 2>& gradf) {
+        void spacegrad2D (std::vector<F>& f, std::array<std::vector<F>, 2>& gradf) {
 
             // Note - East is positive x; North is positive y.
 #pragma omp parallel for schedule(static)
-            for (unsigned int hi=0; hi<this->nhex; ++hi) {
+            for (std::uint32_t hi=0; hi<this->nhex; ++hi) {
 
                 // Find x gradient
-                if (HAS_NE(hi) && HAS_NW(hi)) {
-                    gradf[0][hi] = (f[NE(hi)] - f[NW(hi)]) * oneover2d;
-                } else if (HAS_NE(hi)) {
-                    gradf[0][hi] = (f[NE(hi)] - f[hi]) * oneoverd;
-                } else if (HAS_NW(hi)) {
-                    gradf[0][hi] = (f[hi] - f[NW(hi)]) * oneoverd;
+                if (this->hg->has_ne (hi) && this->hg->has_nw (hi)) {
+                    gradf[0][hi] = (f[this->hg->ne (hi)] - f[this->hg->nw (hi)]) * oneover2d;
+                } else if (this->hg->has_ne (hi)) {
+                    gradf[0][hi] = (f[this->hg->ne (hi)] - f[hi]) * oneoverd;
+                } else if (this->hg->has_nw (hi)) {
+                    gradf[0][hi] = (f[hi] - f[this->hg->nw (hi)]) * oneoverd;
                 } else {
                     // zero gradient in x direction as no neighbours in
                     // those directions? Or possibly use the average of
                     // the gradient between the nw,ne and sw,se neighbours
-                    gradf[0][hi] = Flt{0};
+                    gradf[0][hi] = F{0};
                 }
 
                 // Find y gradient
-                if (HAS_NNW(hi) && HAS_NNE(hi) && HAS_NSW(hi) && HAS_NSE(hi)) {
+                if (this->hg->has_nnw (hi) && this->hg->has_nne (hi) && this->hg->has_nsw (hi) && this->hg->has_nse (hi)) {
                     // Full complement. Compute the mean of the nse->nne and nsw->nnw gradients
-                    gradf[1][hi] = ( (f[NNE(hi)] - f[NSE(hi)]) + (f[NNW(hi)] - f[NSW(hi)]) ) * oneover4v;
-                } else if (HAS_NNW(hi) && HAS_NNE(hi)) {
-                    gradf[1][hi] = ( (f[NNE(hi)] + f[NNW(hi)]) * Flt{0.5} - f[hi]) * oneoverv;
-                } else if (HAS_NSW(hi) && HAS_NSE(hi)) {
-                    gradf[1][hi] = (f[hi] - (f[NSE(hi)] + f[NSW(hi)]) * Flt{0.5}) * oneoverv;
-                } else if (HAS_NNW(hi) && HAS_NSW(hi)) {
-                    gradf[1][hi] = (f[NNW(hi)] - f[NSW(hi)]) * oneover2v;
-                } else if (HAS_NNE(hi) && HAS_NSE(hi)) {
-                    gradf[1][hi] = (f[NNE(hi)] - f[NSE(hi)]) * oneover2v;
+                    gradf[1][hi] = ( (f[this->hg->nne (hi)] - f[this->hg->nse (hi)]) + (f[this->hg->nnw (hi)] - f[this->hg->nsw (hi)]) ) * oneover4v;
+                } else if (this->hg->has_nnw (hi) && this->hg->has_nne (hi)) {
+                    gradf[1][hi] = ( (f[this->hg->nne (hi)] + f[this->hg->nnw (hi)]) * F{0.5} - f[hi]) * oneoverv;
+                } else if (this->hg->has_nsw (hi) && this->hg->has_nse (hi)) {
+                    gradf[1][hi] = (f[hi] - (f[this->hg->nse (hi)] + f[this->hg->nsw (hi)]) * F{0.5}) * oneoverv;
+                } else if (this->hg->has_nnw (hi) && this->hg->has_nsw (hi)) {
+                    gradf[1][hi] = (f[this->hg->nnw (hi)] - f[this->hg->nsw (hi)]) * oneover2v;
+                } else if (this->hg->has_nne (hi) && this->hg->has_nse (hi)) {
+                    gradf[1][hi] = (f[this->hg->nne (hi)] - f[this->hg->nse (hi)]) * oneover2v;
                 } else {
                     // Leave grady at 0
-                    gradf[1][hi] = Flt{0};
+                    gradf[1][hi] = F{0};
                 }
             }
         }
@@ -626,52 +592,52 @@ namespace sm
         /*!
          * Compute laplacian of scalar field F, with result placed in lapF.
          */
-        virtual void compute_laplace (const std::vector<Flt>& F, std::vector<Flt>& lapF) {
+        virtual void compute_laplace (const std::vector<F>& _F, std::vector<F>& lapF) {
 
-            Flt norm  = Flt{2} / (Flt{3.0} * this->d * this->d);
+            F norm  = F{2} / (F{3.0} * this->d * this->d);
 
 #pragma omp parallel for schedule(static)
-            for (unsigned int hi=0; hi<this->nhex; ++hi) {
+            for (std::uint32_t hi=0; hi<this->nhex; ++hi) {
 
                 // 1. The D Del^2 term
 
                 // Compute the sum around the neighbours
-                Flt thesum = Flt{-6} * F[hi];
-                if (HAS_NE(hi)) {
-                    thesum += F[NE(hi)];
+                F thesum = F{-6} * _F[hi];
+                if (this->hg->has_ne (hi)) {
+                    thesum += _F[this->hg->ne (hi)];
                 } else {
-                    thesum += F[hi]; // A ghost neighbour-east with same value as Hex_0
+                    thesum += _F[hi]; // A ghost neighbour-east with same value as Hex_0
                 }
-                if (HAS_NNE(hi)) {
-                    thesum += F[NNE(hi)];
+                if (this->hg->has_nne (hi)) {
+                    thesum += _F[this->hg->nne (hi)];
                 } else {
-                    thesum += F[hi];
+                    thesum += _F[hi];
                 }
-                if (HAS_NNW(hi)) {
-                    thesum += F[NNW(hi)];
+                if (this->hg->has_nnw (hi)) {
+                    thesum += _F[this->hg->nnw (hi)];
                 } else {
-                    thesum += F[hi];
+                    thesum += _F[hi];
                 }
-                if (HAS_NW(hi)) {
-                    thesum += F[NW(hi)];
+                if (this->hg->has_nw (hi)) {
+                    thesum += _F[this->hg->nw (hi)];
                 } else {
-                    thesum += F[hi];
+                    thesum += _F[hi];
                 }
-                if (HAS_NSW(hi)) {
-                    thesum += F[NSW(hi)];
+                if (this->hg->has_nsw (hi)) {
+                    thesum += _F[this->hg->nsw (hi)];
                 } else {
-                    thesum += F[hi];
+                    thesum += _F[hi];
                 }
-                if (HAS_NSE(hi)) {
-                    thesum += F[NSE(hi)];
+                if (this->hg->has_nse (hi)) {
+                    thesum += _F[this->hg->nse (hi)];
                 } else {
-                    thesum += F[hi];
+                    thesum += _F[hi];
                 }
 
                 lapF[hi] = norm * thesum;
             }
         }
 
-    }; // RD_Base
+    }; // rd_base
 
 } // namespace
