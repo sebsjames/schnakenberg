@@ -1,7 +1,10 @@
 # Schakenberg reaction diffusion system
 
-This is a standalone example of a program which builds against
-mathplot.
+This is a standalone example of a reaction diffusion program which
+builds against mathplot.
+
+This example project demonstrates how you
+can write and build a program that uses [mathplot](https://github.com/sebsjames/mathplot).
 
 ## Dependencies
 
@@ -9,24 +12,12 @@ If you are using Debian or Ubuntu, the following `apt` command should
 install the mathplot dependencies.
 
 ```bash
-sudo apt install build-essential cmake git wget  \
-                 nlohmann-java3-dev librapidxml-dev \
+sudo apt install build-essential cmake git ninja-build  \
                  freeglut3-dev libglu1-mesa-dev libxmu-dev libxi-dev \
-                 libglfw3-dev libfreetype-dev
+                 libglfw3-dev libfreetype-dev clang-20 clang-tools-20 librapidxml-dev libhdf5-dev
 ```
 
-On Arch Linux the following command should install dependencies:
-```bash
-sudo pacman -S vtk lapack blas freeglut glfw-wayland nlohmann-java rapidxml
-```
-
-On Fedora Linux, the following command should install the required dependencies
-```bash
-sudo dnf install gcc cmake libglvnd-devel mesa-libGL-devel glfw-devel \
-                 freetype-devel armadillo-devel hdf5-devel nlohmann-java-devel rapidxml-devel
-```
-
-If you're building on a Mac, you can refer to the [Mac
+If you're building on a Mac, you can refer to mathplot's [Mac
 README](https://github.com/sebsjames/mathplot/blob/main/README.build.mac.md#installation-dependencies-for-mac)
 for help. You only need to obtain and build
 [glfw3](https://github.com/sebsjames/mathplot/blob/main/README.build.mac.md#glfw3);
@@ -40,14 +31,18 @@ To build and run the example:
 # Clone this example
 git clone git@github.com:sebsjames/schnakenberg
 
-# Clone, copy or symlink mathplot INSIDE your example:
+# Bring in the submodules - sebsjames/mathplot, sebsjames/maths , sebsjames/maths_config and nlohmann/json
 cd schnakenberg
-git clone --recurse-submodules git@github.com:sebsjames/mathplot
+git submodule init
+git submodule update
 
-# Build schakenberg in a 'build' directory
+# Build schnakenberg in a 'build' directory
 mkdir build
 cd build
-cmake ..
-make
+CC=clang-20 CXX=clang++-20 cmake .. -GNinja
+ninja
+cd ..
+
+# Run the example
 ./build/schnakenberg ./schakenberg.json
 ```
